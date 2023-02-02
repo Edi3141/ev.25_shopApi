@@ -1,4 +1,3 @@
-
 from django.contrib.auth import get_user_model
 from rest_framework import permissions
 from rest_framework.generics import GenericAPIView
@@ -7,7 +6,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 
 from . import serializers
-from .send_mail import send_confirmation_email
+from .send_mail import send_confirmation_email, send_reset_email
 
 User = get_user_model()
 
@@ -26,9 +25,7 @@ class RegistrationView(APIView):
                     return Response(
                         {
                             'msg': 'Registered but troubles with mail!',
-                            'data': serializer.data}, status=201
-                    )
-
+                            'data': serializer.data}, status=201)
             return Response(serializer.data, status=201)
         return Response('Bad request!', status=400)
 
@@ -43,7 +40,7 @@ class ActivationView(APIView):
             user.activation_code = ''
             user.save()
             return Response({'msg': 'Successfully activated!'}, status=200)
-        except User.DoesNotExist:
+        except User.DoesNotExists:
             return Response({'msg': 'Link expired!'}, status=400)
 
 
@@ -59,5 +56,42 @@ class LogoutView(GenericAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response('Successfully logged out!', status=200)
+
+
+class ForgotPasswordView(APIView):
+    permission_classes = (permissions.AllowAny,)
+
+    def post(self, request):
+        serializer = serializers.ForgotPasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        try:
+            email = serializer.data.get('email')
+            user = User.objects.get(email=email)
+            user.create_activation_code()
+            user.save()
+            send_reset_email(user)
+            return Response('Check your email! We sent a code!', status=200)
+        except User.DoesNotExists:
+            return Response('User with this email does not exists!', status=400)
+
+
+class RestorePasswordView(APIView):
+    permission_classes = (permissions.AllowAny,)
+
+    def post(self, request):
+        serializer = serializers.RestorePasswordSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response('Password changed successfully!')
+
+
+
+
+
+
+
+
+
+
 
 

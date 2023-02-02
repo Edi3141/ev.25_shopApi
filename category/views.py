@@ -1,12 +1,10 @@
-
 from rest_framework import permissions
 from rest_framework.viewsets import ModelViewSet
-from category import serializers
 
+from category import serializers
 from category.models import Category
 
 
-# Create your views here.
 class CategoryViewSet(ModelViewSet):
     queryset = Category.objects.all()
     serializer_class = serializers.CategorySerializer

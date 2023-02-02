@@ -1,6 +1,7 @@
 from django.contrib.auth import get_user_model
-from rest_framework import serializers
+
 from django.utils.translation import gettext_lazy as _
+from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 
@@ -15,16 +16,15 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ('email', 'password', 'password2', 'last_name',
-                  'first_name', 'username', 'avatar')
+        fields = ('email', 'password', 'password2', 'last_name', 'first_name',
+                 'username', 'avatar')
 
     def validate(self, attrs):
         password2 = attrs.pop('password2')
         if attrs['password'] != password2:
-            raise serializers.ValidationError('Passwords did not match!')
+            raise serializers.ValidationError('Passwords did\'t match!')
         if not attrs['password'].isalnum():
-            raise serializers.ValidationError('Password field must contain'
-                                              'alpha and numeric symbols!')
+            raise serializers.ValidationError('Passwords fields must contain alpha and numeric symbols!')
         return attrs
 
     def create(self, validated_data):
@@ -35,7 +35,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 class LogoutSerializer(serializers.Serializer):
     refresh = serializers.CharField()
 
-    default_error_messages = {'bad_token': _('Token is valid or expired!')}
+    default_error_messages = {'bad_token': _('Token is invalid or expired!')}
 
     def validate(self, attrs):
         self.token = attrs['refresh']
@@ -46,6 +46,35 @@ class LogoutSerializer(serializers.Serializer):
             RefreshToken(self.token).blacklist()
         except TokenError:
             self.fail('bad_token')
+
+
+class ForgotPasswordSerializer(serializers.Serializer):
+    email = serializers.EmailField(max_length=100, required=True)
+
+
+class RestorePasswordSerializer(serializers.Serializer):
+    code = serializers.CharField(max_length=100, required=True)
+    password = serializers.CharField(min_length=8, required=True)
+    password2 = serializers.CharField(min_length=8, required=True)
+
+    def validate(self, attrs):
+        password2 = attrs.pop('password2')
+        if password2 != attrs['password']:
+            raise serializers.ValidationError('Passwords do not match!')
+        try:
+            user = User.objects.get(activation_code=attrs['code'])
+        except User.DoesNotExists:
+            raise serializers.ValidationError('Your code is incorrect!')
+        attrs['user'] = user
+        return attrs
+
+    def save(self, **kwargs):
+        data = self.validated_data
+        user = data['user']
+        user.set_password(data['password'])
+        user.activation_code = ''
+        user.save()
+        return user
 
 
 

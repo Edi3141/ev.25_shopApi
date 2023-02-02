@@ -11,10 +11,12 @@ class Product(models.Model):
         ('in_stock', 'В наличии'),
         ('out_of_stock', 'Нет в наличии')
     )
-    owner = models.ForeignKey(User, on_delete=models.RESTRICT, related_name='products')
+    owner = models.ForeignKey(User, on_delete=models.RESTRICT,
+                              related_name='products')
     title = models.CharField(max_length=150)
     description = RichTextField()
-    category = models.ForeignKey(Category, related_name='products', on_delete=models.RESTRICT)
+    category = models.ForeignKey(Category, related_name='products',
+                                 on_delete=models.RESTRICT)
     image = models.ImageField(upload_to='images')
     price = models.DecimalField(max_digits=12, decimal_places=2)
     stock = models.CharField(choices=STATUS_CHOICES, max_length=50)
@@ -22,3 +24,4 @@ class Product(models.Model):
 
     def __str__(self):
         return self.title
+
